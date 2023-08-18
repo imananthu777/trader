@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading Cockpit</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      margin: 5px;
+      width: 100px;
+      transition: background-color 0.3s ease;
+    }
+
+    #buyButton {
+      background-color: green;
+      color: white;
+    }
+
+    #sellButton {
+      background-color: red;
+      color: white;
+    }
+
+    #closeButton {
+      background-color: violet;
+      color: white;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    #infoMessage {
+      font-size: 18px;
+      color: blue;
+      margin-top: 10px;
+    }
+
+    #infoLog {
+      font-size: 14px;
+      color: gray;
+      text-align: center;
+    }
+
+    #infoLog p {
+      margin: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Trading Cockpit</h1>
+
+  <button id="buyButton" onclick="buyClicked()">Buy</button>
+  <button id="sellButton" onclick="sellClicked()">Sell</button>
+  <button id="closeButton" onclick="resetButtons()">Close</button>
+
+  <p id="infoMessage"></p>
+  <div id="infoLog"></div>
+
+
+
+
+  <script>
+
+    const auth_code = "{{ auth_code }}";
+    window.authToken = auth_code;
+    //console.log(auth_code);
+    const authTokenElement = document.createElement('p');
+    authTokenElement.textContent = 'Login Token : ' + auth_code;
+    document.body.appendChild(authTokenElement);
+
+
+    // Your API endpoint URL
+    const apiUrl = '/trade';
+
+    // Common key for all buttons
+    const key = 'nifty50';
+
+    // Function to make the API request
+    async function makeApiRequest(value) {
+      const params = {
+        key: key,
+        value: value,
+        'auth-token': window.authToken // Use the saved authToken from the global variable
+      };
+
+      // Serialize parameters to query string format
+      const queryString = Object.keys(params).map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`).join('&');
+      const fullUrl = `${apiUrl}?${queryString}`;
+      //console.log(fullUrl);
+
+      // Use fetch API to send the request
+      try {
+        const response = await fetch(fullUrl);
+        const data = await response.text();
+        //console.log(data);
+        // Check if the response is "Ok" and display the info message
+        if (data === 'Ok') {
+          if (value === 1) {
+            document.getElementById("infoMessage").innerText = "Buy order filled!";
+            addToLog("Long Position order Successful!");
+          } else if (value === 2) {
+            document.getElementById("infoMessage").innerText = "Sell order filled!";
+            addToLog("Short Position order Successful");
+          } else if (value === 0) {
+            document.getElementById("infoMessage").innerText = "Open position squared off!";
+            addToLog("Open position squared off!");
+          }
+          setTimeout(function () {
+            document.getElementById("infoMessage").innerText = "";
+          }, 1500);
+        } else if (data) {
+          addToLog("Order failed! Reason: " + data);
+        }
+      } catch (error) {
+        document.getElementById("infoMessage").innerText = data;
+        addToLog("Order failed!" + data);
+      }
+    }
+
+    // Function to disable the buy button and send the API request
+    function buyClicked() {
+      document.getElementById("buyButton").disabled = true;
+      document.getElementById("sellButton").disabled = false;
+      document.getElementById("closeButton").disabled = false;
+      document.getElementById("infoMessage").innerText = "Buy order Sent!";
+      addToLog("Buy order Sent!");
+      makeApiRequest(1); // Send API request for Buy (value = 1)
+    }
+
+    // Function to disable the sell button and send the API request
+    function sellClicked() {
+      document.getElementById("sellButton").disabled = true;
+      document.getElementById("buyButton").disabled = false;
+      document.getElementById("closeButton").disabled = false;
+      document.getElementById("infoMessage").innerText = "Sell order sent!";
+      addToLog("Sell order sent!");
+      makeApiRequest(2); // Send API request for Sell (value = 2)
+    }
+
+    // Function to enable both buy and sell buttons and show an info message
+    function resetButtons() {
+      document.getElementById("buyButton").disabled = false;
+      document.getElementById("sellButton").disabled = false;
+      document.getElementById("closeButton").disabled = true;
+      document.getElementById("infoMessage").innerText = "Square off request sent!";
+      addToLog("Square off request sent!");
+      makeApiRequest(0); // Send API request for Sell (value = 2)
+      setTimeout(function () {
+        document.getElementById("infoMessage").innerText = "";
+      }, 1500);
+    }
+
+    // Function to get the current time in HH:MM:SS format
+    function getCurrentTime() {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const seconds = now.getSeconds().toString().padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    }
+
+    // Function to add messages to the log and display in descending order
+    function addToLog(message) {
+      const currentTime = getCurrentTime();
+      const logDiv = document.getElementById("infoLog");
+      const logMessage = `<p>[${currentTime}] ${message}</p>`;
+      logDiv.innerHTML = logMessage + logDiv.innerHTML;
+    }
+  </script>
+
+</body>
+
+</html>
